@@ -1,0 +1,6 @@
+node_modules/
+typings/
+**/*.js
+*.d.ts
+!typings.d.ts
+*.log

@@ -1,0 +1,44 @@
+{
+  "name": "pretur.pipeline",
+  "version": "0.0.1",
+  "description": "Monetary calculation pipeline",
+  "main": "index.js",
+  "files": [
+    "*.js",
+    "*.d.ts",
+    "typings.json",
+    "typings.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc -d src/index.ts --rootDir src --outDir . --jsx react --module commonjs --removeComments",
+    "prepublish": "typings install && npm run build",
+    "ci-test": "npm run test",
+    "pretest": "tsc",
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pretur/pipeline.git"
+  },
+  "keywords": [
+    "pretur",
+    "money",
+    "pipeline"
+  ],
+  "author": "Ali Taheri Moghaddar",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pretur/pipeline/issues"
+  },
+  "homepage": "https://github.com/pretur/pipeline#readme",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^2.4.5",
+    "typescript": "^1.7.5",
+    "typings": "^0.6.8"
+  },
+  "dependencies": {
+    "acorn": "^3.0.4",
+    "bluebird": "^3.3.3"
+  }
+}
