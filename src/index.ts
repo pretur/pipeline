@@ -1,12 +1,14 @@
 import * as param from './param';
+import * as utils from './utils';
+import {Pipeline} from './pipeline';
 
-export {param};
+export {param, utils, Pipeline};
 
 export interface Context {
   [id: string]: param.Parameter;
 }
 
-export interface Step {
-  dependencies: string[];
-  apply(context: Context): Promise<number>;
+export interface StepResult {
+  result: number;
+  ordinal: number;
 }
