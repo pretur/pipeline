@@ -1,6 +1,6 @@
 import * as Promise from 'bluebird';
 
-import {Context} from './index';
+import {Context, StepResult} from './index';
 
 export const enum ParameterType {
   CONSTANT = 0,
@@ -28,9 +28,14 @@ export interface ContextualParameter extends Parameter {
   resolve(context: Context): Promise<number>;
 }
 
+export interface AccumulationModifier {
+  (param: AccumulatedParameter, context: Context, step: StepResult): Promise<number>;
+}
+
 export interface AccumulatedParameter extends Parameter {
+  initial: number;
   value: number;
-  set(balance: number): void;
+  modify(context: Context, step: StepResult): Promise<number>;
 }
 
 export const is = {
@@ -104,13 +109,23 @@ export function createContextual(id: string, resolve: (context: Context) => Prom
   };
 }
 
-export function createAccumulated(id: string, initial?: number): AccumulatedParameter {
-  const cache: AccumulatedParameter = {
+export function createAccumulated(id: string, initial: number, modifier: AccumulationModifier): AccumulatedParameter {
+  const accumulated: AccumulatedParameter = {
     id,
-    value: initial || 0,
-    set: null,
+    initial,
+    value: initial,
+    modify: null,
     type: ParameterType.ACCUMULATED,
   };
-  cache.set = (balance: number) => cache.value = balance;
-  return cache;
+
+  accumulated.modify = (context: Context, step: StepResult) => {
+
+    return modifier(accumulated, context, step).then(result => {
+      accumulated.value = result;
+      return result;
+    });
+
+  };
+
+  return accumulated;
 }

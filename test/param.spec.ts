@@ -36,19 +36,19 @@ describe('params', () => {
   describe('cached', () => {
 
     it('should create a cached param', () => {
-      const param = createCached('CUSTOEMR_CREDIT', () => Promise.resolve(1000));
+      const param = createCached('CUSTOMER_CREDIT', () => Promise.resolve(1000));
       expect(param.hasValue).to.be.false;
       expect(param.value).to.be.null;
     });
 
     it('should test against a cached param', () => {
-      const param = createCached('CUSTOEMR_CREDIT', () => Promise.resolve(1000));
+      const param = createCached('CUSTOMER_CREDIT', () => Promise.resolve(1000));
       expect(is.cached(param)).to.be.true;
     });
 
     it('should resolve only once', () => {
       let resolved = 0;
-      const param = createCached('CUSTOEMR_CREDIT', () => {
+      const param = createCached('CUSTOMER_CREDIT', () => {
         resolved++;
         return Promise.resolve(1000);
       });
@@ -61,7 +61,7 @@ describe('params', () => {
     });
 
     it('should resolve all extra calls too', () => {
-      const param = createCached('CUSTOEMR_CREDIT', () => Promise.resolve(1000));
+      const param = createCached('CUSTOMER_CREDIT', () => Promise.resolve(1000));
 
       const firstPromise = param.resolve();
       const secondPromise = param.resolve();
@@ -91,7 +91,7 @@ describe('params', () => {
     });
 
     it('should resolve correctly', () => {
-      const param = createCached('CUSTOEMR_CREDIT', () => Promise.resolve(1000));
+      const param = createCached('CUSTOMER_CREDIT', () => Promise.resolve(1000));
       const promise = param.resolve();
 
       expect(param.hasValue).to.be.false;
@@ -126,12 +126,12 @@ describe('params', () => {
 
     it('should retrieve value from a cached param in context', () => {
       const param = createContextual('DISCOUNT', (context) => {
-        const credit = context['CUSTOEMR_CREDIT'] as CachedParameter;
+        const credit = context['CUSTOMER_CREDIT'] as CachedParameter;
         expect(is.cached(credit)).to.be.true;
         return credit.resolve().then(result => result * 2);
       });
 
-      return param.resolve({ 'CUSTOEMR_CREDIT': createCached('GROSS', () => Promise.resolve(100)) })
+      return param.resolve({ 'CUSTOMER_CREDIT': createCached('GROSS', () => Promise.resolve(100)) })
         .then((result) => expect(result).to.be.equals(200));
     });
 
@@ -140,12 +140,12 @@ describe('params', () => {
       let cachedResolved = 0;
 
       const context: Context = {
-        'CUSTOEMR_CREDIT': createCached('GROSS', () => {
+        'CUSTOMER_CREDIT': createCached('GROSS', () => {
           cachedResolved++;
           return Promise.resolve(100);
         }),
         'TAX': createContextual('GROSS', (context) => {
-          const credit = context['CUSTOEMR_CREDIT'] as CachedParameter;
+          const credit = context['CUSTOMER_CREDIT'] as CachedParameter;
           expect(is.cached(credit)).to.be.true;
           return credit.resolve().then(result => result * 2);
         }),
@@ -155,7 +155,7 @@ describe('params', () => {
         const tax = context['TAX'] as ContextualParameter;
         expect(is.contextual(tax)).to.be.true;
 
-        const credit = context['CUSTOEMR_CREDIT'] as CachedParameter;
+        const credit = context['CUSTOMER_CREDIT'] as CachedParameter;
         expect(is.cached(credit)).to.be.true;
 
         return Promise.all([
@@ -175,23 +175,73 @@ describe('params', () => {
   describe('accumulated', () => {
 
     it('should create an accumulated param', () => {
-      const param = createAccumulated('NET', 1000);
+      const param = createAccumulated('NET', 1000, () => Promise.resolve(1));
       expect(param.value).to.be.equals(1000);
     });
 
     it('should test against an accumulated param', () => {
-      const param = createAccumulated('NET', 1000);
+      const param = createAccumulated('NET', 1000, () => Promise.resolve(1));
       expect(is.accumulated(param)).to.be.true;
     });
 
     it('should correctly modify the param', () => {
-      const param = createAccumulated('NET', 1000);
-      param.set(1000 - 100);
-      expect(param.value).to.be.equals(900);
-      param.set(1000 + 100)
-      expect(param.value).to.be.equals(1100);
-      param.set(Math.floor(1000 / 3));
-      expect(param.value).to.be.equals(333);
+      const param = createAccumulated('NET', 1000,
+        (param, context) => Promise.resolve(param.initial + (context['GROSS'] as ConstantParameter).value));
+
+      return param.modify({ GROSS: createConstant('GROSS', 10) }, null)
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1010));
+    });
+
+    it('should correctly accumulate the value', () => {
+      const param = createAccumulated('NET', 1000,
+        (param, context) => Promise.resolve(param.value + (context['GROSS'] as ConstantParameter).value));
+
+      const context: Context = { GROSS: createConstant('GROSS', 10) };
+
+      return param.modify(context, null)
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1010))
+        .then(() => param.modify(context, null))
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1020));
+    });
+
+    it('should correctly accumulate the value based on step', () => {
+      const param = createAccumulated('NET', 1000,
+        (param, context, step) => {
+          return Promise.resolve((param.value + (context['STEP_GROSS'] as ConstantParameter).value) + step.result);
+        });
+
+      const context: Context = { STEP_GROSS: createConstant('STEP_GROSS', 10) };
+
+      return param.modify(context, { ordinal: 1, result: 100 })
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1110))
+        .then(() => param.modify(context, { ordinal: 2, result: 150 }))
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1270))
+        .then(() => param.modify(context, { ordinal: 3, result: -200 }))
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1080));
+    });
+
+    it('should correctly accumulate the value with complex dependencies', () => {
+
+      const context: Context = {
+        STEP_GROSS: createConstant('STEP_GROSS', 10),
+        CUSTOMER_CREDIT: createCached('CUSTOMER_CREDIT', () => Promise.resolve(1000)),
+      };
+
+      const param = createAccumulated('NET', 1000,
+        (param, context, step) => {
+
+          const gross = (context['STEP_GROSS'] as ConstantParameter).value;
+          const creditPromise = (context['CUSTOMER_CREDIT'] as CachedParameter).resolve();
+
+          return creditPromise.then(credit => Promise.resolve(param.value + gross - (credit / 1000) + step.result));
+        });
+
+      return param.modify(context, { ordinal: 1, result: 100 })
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1109))
+        .then(() => param.modify(context, { ordinal: 2, result: 150 }))
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1268))
+        .then(() => param.modify(context, { ordinal: 3, result: -200 }))
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1077));
     });
 
   });
