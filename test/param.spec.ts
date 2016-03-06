@@ -3,12 +3,18 @@
 import * as Promise from 'bluebird';
 import {expect} from 'chai';
 
+import {Context} from '../src';
+
 import {
 is,
 createConstant,
 createCached,
 createContextual,
 createAccumulated,
+AccumulatedParameter,
+ConstantParameter,
+ContextualParameter,
+CachedParameter,
 } from '../src/param';
 
 describe('params', () => {
@@ -109,7 +115,7 @@ describe('params', () => {
 
     it('should retrieve value from constant param in context', () => {
       const param = createContextual('DISCOUNT', (context) => {
-        const gross = context['GROSS'] as Pretur.Pipeline.Parameter.Constant;
+        const gross = context['GROSS'] as ConstantParameter;
         expect(is.constant(gross)).to.be.true;
         return Promise.resolve(gross.value);
       });
@@ -120,7 +126,7 @@ describe('params', () => {
 
     it('should retrieve value from a cached param in context', () => {
       const param = createContextual('DISCOUNT', (context) => {
-        const credit = context['CUSTOEMR_CREDIT'] as Pretur.Pipeline.Parameter.Cached;
+        const credit = context['CUSTOEMR_CREDIT'] as CachedParameter;
         expect(is.cached(credit)).to.be.true;
         return credit.resolve().then(result => result * 2);
       });
@@ -133,23 +139,23 @@ describe('params', () => {
 
       let cachedResolved = 0;
 
-      const context: Pretur.Pipeline.Context = {
+      const context: Context = {
         'CUSTOEMR_CREDIT': createCached('GROSS', () => {
           cachedResolved++;
           return Promise.resolve(100);
         }),
         'TAX': createContextual('GROSS', (context) => {
-          const credit = context['CUSTOEMR_CREDIT'] as Pretur.Pipeline.Parameter.Cached;
+          const credit = context['CUSTOEMR_CREDIT'] as CachedParameter;
           expect(is.cached(credit)).to.be.true;
           return credit.resolve().then(result => result * 2);
         }),
       };
 
       const param = createContextual('DISCOUNT', (context) => {
-        const tax = context['TAX'] as Pretur.Pipeline.Parameter.Contextual;
+        const tax = context['TAX'] as ContextualParameter;
         expect(is.contextual(tax)).to.be.true;
 
-        const credit = context['CUSTOEMR_CREDIT'] as Pretur.Pipeline.Parameter.Cached;
+        const credit = context['CUSTOEMR_CREDIT'] as CachedParameter;
         expect(is.cached(credit)).to.be.true;
 
         return Promise.all([

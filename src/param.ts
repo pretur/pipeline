@@ -1,42 +1,75 @@
 import * as Promise from 'bluebird';
 
+import {Context} from './index';
+
+export const enum ParameterType {
+  CONSTANT = 0,
+  CACHED = 1,
+  CONTEXTUAL = 2,
+  ACCUMULATED = 3,
+}
+
+export interface Parameter {
+  id: string;
+  type: ParameterType;
+}
+
+export interface CachedParameter extends Parameter {
+  hasValue: boolean;
+  value: number;
+  resolve(): Promise<number>;
+}
+
+export interface ConstantParameter extends Parameter {
+  value: number;
+}
+
+export interface ContextualParameter extends Parameter {
+  resolve(context: Context): Promise<number>;
+}
+
+export interface AccumulatedParameter extends Parameter {
+  value: number;
+  set(balance: number): void;
+}
+
 export const is = {
-  constant(parameter: Pretur.Pipeline.Parameter): parameter is Pretur.Pipeline.Parameter.Constant {
-    return parameter.type === Pretur.Pipeline.ParameterType.CONSTANT;
+  constant(parameter: Parameter): parameter is ConstantParameter {
+    return parameter.type === ParameterType.CONSTANT;
   },
 
-  cached(parameter: Pretur.Pipeline.Parameter): parameter is Pretur.Pipeline.Parameter.Cached {
-    return parameter.type === Pretur.Pipeline.ParameterType.CACHED;
+  cached(parameter: Parameter): parameter is CachedParameter {
+    return parameter.type === ParameterType.CACHED;
   },
 
-  contextual(parameter: Pretur.Pipeline.Parameter): parameter is Pretur.Pipeline.Parameter.Contextual {
-    return parameter.type === Pretur.Pipeline.ParameterType.CONTEXTUAL;
+  contextual(parameter: Parameter): parameter is ContextualParameter {
+    return parameter.type === ParameterType.CONTEXTUAL;
   },
 
-  accumulated(parameter: Pretur.Pipeline.Parameter): parameter is Pretur.Pipeline.Parameter.Accumulated {
-    return parameter.type === Pretur.Pipeline.ParameterType.ACCUMULATED;
+  accumulated(parameter: Parameter): parameter is AccumulatedParameter {
+    return parameter.type === ParameterType.ACCUMULATED;
   },
 };
 
-export function createConstant(id: string, value: number): Pretur.Pipeline.Parameter.Constant {
+export function createConstant(id: string, value: number): ConstantParameter {
   return {
     id,
     value,
-    type: Pretur.Pipeline.ParameterType.CONSTANT,
+    type: ParameterType.CONSTANT,
   };
 }
 
 export function createCached(
   id: string,
   resolve: () => Promise<number>
-): Pretur.Pipeline.Parameter.Cached {
+): CachedParameter {
 
-  const cache: Pretur.Pipeline.Parameter.Cached = {
+  const cache: CachedParameter = {
     id,
     hasValue: false,
     value: null,
     resolve: null,
-    type: Pretur.Pipeline.ParameterType.CACHED,
+    type: ParameterType.CACHED,
   };
 
   let resolvePromise = null;
@@ -63,23 +96,20 @@ export function createCached(
   return cache;
 }
 
-export function createContextual(
-  id: string,
-  resolve: (context: Pretur.Pipeline.Context) => Promise<number>
-): Pretur.Pipeline.Parameter.Contextual {
+export function createContextual(id: string, resolve: (context: Context) => Promise<number>): ContextualParameter {
   return {
     id,
     resolve,
-    type: Pretur.Pipeline.ParameterType.CONTEXTUAL,
+    type: ParameterType.CONTEXTUAL,
   };
 }
 
-export function createAccumulated(id: string, initial?: number): Pretur.Pipeline.Parameter.Accumulated {
-  const cache: Pretur.Pipeline.Parameter.Accumulated = {
+export function createAccumulated(id: string, initial?: number): AccumulatedParameter {
+  const cache: AccumulatedParameter = {
     id,
     value: initial || 0,
     set: null,
-    type: Pretur.Pipeline.ParameterType.ACCUMULATED,
+    type: ParameterType.ACCUMULATED,
   };
   cache.set = (balance: number) => cache.value = balance;
   return cache;
