@@ -1,30 +1,31 @@
-import {Parameter, ParameterValueType} from './param';
+import * as acorn from 'acorn';
+
+import {discoverDependencies} from './utils';
+import {Parameter} from './param';
 
 export interface Context {
   [id: string]: Parameter;
 }
 
-export interface Pipeline {
-  addStep(step: string): this;
-  execute(context: Context): Promise<void>;
+interface CompiledStep {
+  apply(context: Context): Promise<void>;
 }
 
-interface StepData {
-  dependencies: string[];
-  apply(context: Context): Promise<ParameterValueType>;
-}
+export class Pipeline {
+  private steps: string[] = [];
+  private stepsAst: ESTree.Program[] = [];
+  private stepsCompiled: ESTree.Program[] = [];
 
-function pipeline(): Pipeline {
-
-  const steps: StepData[] = [];
-  const params = Object.keys(context);
-
-  function addStep(step: string) {
-
-
-
+  addStep(step: string): this {
+    this.stepsAst.push(acorn.parse(step));
+    this.steps.push(step);
+    return this;
   }
 
-  return null;
-
+  execute(context: Context): Promise<void> {
+    return null;
+  }
 }
+
+
+    //const dependencies = discoverDependencies(step)

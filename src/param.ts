@@ -9,62 +9,60 @@ export const enum ParameterType {
   ACCUMULATED = 3,
 }
 
-export type ParameterValueType = number | string | boolean;
-
 export interface Parameter {
   type: ParameterType;
 }
 
-export interface CachedParameter<T extends ParameterValueType> extends Parameter {
+export interface CachedParameter<T> extends Parameter {
   hasValue: boolean;
   value: T;
   resolve(): Promise<T>;
 }
 
-export interface ConstantParameter<T extends ParameterValueType> extends Parameter {
+export interface ConstantParameter<T> extends Parameter {
   value: T;
 }
 
-export interface ContextualParameter<T extends ParameterValueType> extends Parameter {
-  resolve(context: Context): Promise<T>;
+export interface ContextualParameter<T> extends Parameter {
+  resolve(context: Context, step: number): Promise<T>;
 }
 
-export interface AccumulationModifier<T extends ParameterValueType> {
+export interface AccumulationModifier<T> {
   (param: AccumulatedParameter<T>, context: Context, stepResult: T): Promise<T>;
 }
 
-export interface AccumulatedParameter<T extends ParameterValueType> extends Parameter {
+export interface AccumulatedParameter<T> extends Parameter {
   initial: T;
   value: T;
-  modify(context: Context, step: T): Promise<T>;
+  modify(context: Context, stepResult: T): Promise<T>;
 }
 
 export const is = {
-  constant<T>(parameter: Parameter): parameter is ConstantParameter<ParameterValueType> {
+  constant<T>(parameter: Parameter): parameter is ConstantParameter<T> {
     return parameter.type === ParameterType.CONSTANT;
   },
 
-  cached<T>(parameter: Parameter): parameter is CachedParameter<ParameterValueType> {
+  cached<T>(parameter: Parameter): parameter is CachedParameter<T> {
     return parameter.type === ParameterType.CACHED;
   },
 
-  contextual<T>(parameter: Parameter): parameter is ContextualParameter<ParameterValueType> {
+  contextual<T>(parameter: Parameter): parameter is ContextualParameter<T> {
     return parameter.type === ParameterType.CONTEXTUAL;
   },
 
-  accumulated<T>(parameter: Parameter): parameter is AccumulatedParameter<ParameterValueType> {
+  accumulated<T>(parameter: Parameter): parameter is AccumulatedParameter<T> {
     return parameter.type === ParameterType.ACCUMULATED;
   },
 };
 
-export function createConstant<T extends ParameterValueType>(value: T): ConstantParameter<T> {
+export function createConstant<T>(value: T): ConstantParameter<T> {
   return {
     value,
     type: ParameterType.CONSTANT,
   };
 }
 
-export function createCached<T extends ParameterValueType>(resolve: () => Promise<T>): CachedParameter<T> {
+export function createCached<T>(resolve: () => Promise<T>): CachedParameter<T> {
 
   const cache: CachedParameter<T> = {
     hasValue: false,
@@ -97,8 +95,8 @@ export function createCached<T extends ParameterValueType>(resolve: () => Promis
   return cache;
 }
 
-export function createContextual<T extends ParameterValueType>(
-  resolve: (context: Context) => Promise<T>
+export function createContextual<T>(
+  resolve: (context: Context, step: number) => Promise<T>
 ): ContextualParameter<T> {
   return {
     resolve,
@@ -106,8 +104,8 @@ export function createContextual<T extends ParameterValueType>(
   };
 }
 
-export function createAccumulated<T extends ParameterValueType>(
-  initial: T, modifier: AccumulationModifier<T>
+export function createAccumulated<T>(
+  initial: T, modifier?: AccumulationModifier<T>
 ): AccumulatedParameter<T> {
   const accumulated: AccumulatedParameter<T> = {
     initial,
@@ -116,9 +114,13 @@ export function createAccumulated<T extends ParameterValueType>(
     type: ParameterType.ACCUMULATED,
   };
 
-  accumulated.modify = (context: Context, step: T) => {
+  accumulated.modify = (context: Context, stepResult: T) => {
 
-    return modifier(accumulated, context, step).then(result => {
+    const modifierPromise = modifier
+      ? modifier(accumulated, context, stepResult)
+      : Promise.resolve(stepResult);
+
+    return modifierPromise.then(result => {
       accumulated.value = result;
       return result;
     });

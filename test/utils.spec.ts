@@ -1,8 +1,9 @@
 /// <reference path="../typings/main.d.ts" />
 
 import {expect} from 'chai';
+import * as acorn from 'acorn';
 
-import {discoverDependencies, getAvailableStepIds} from '../src/utils';
+import {discoverDependencies, compileExpression} from '../src/utils';
 
 describe('utils', () => {
 
@@ -29,17 +30,26 @@ describe('utils', () => {
       expect(deps).to.be.deep.equal(['GROSS', 'NET', 'STEP_1', 'CREDIT']);
     });
 
-  });
+    it('should discover dependencies from a syntax tree', () => {
+      const validIds = ['GROSS', 'NET', 'STEP_1'];
+      const expression = `result = (STEP_1 + GROSS - NET) / NET * STEP_1`;
 
-  describe('getAvailableStepIds', () => {
+      const deps = discoverDependencies(acorn.parse(expression), validIds);
 
-    it('should return no ids for step 1', () => {
-      expect(getAvailableStepIds(1)).to.be.deep.equal([]);
-    });
-
-    it('should return correct ids for step 5', () => {
-      expect(getAvailableStepIds(5)).to.be.deep.equal(['STEP_1', 'STEP_2', 'STEP_3', 'STEP_4']);
+      expect(deps).to.be.deep.equal(['STEP_1', 'GROSS', 'NET']);
     });
 
   });
+
+  describe('compileExpression', () => {
+
+    it('should scope execution', () => {
+      const context = { a: true };
+      const compiled = compileExpression(`a = Array.isArray([])`);
+      compiled(context);
+      expect(context.a).to.be.equals(true);
+    });
+
+  });
+
 });

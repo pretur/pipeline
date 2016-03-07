@@ -31,6 +31,14 @@ describe('params', () => {
       expect(is.constant(param)).to.be.true;
     });
 
+    it('should work with other types', () => {
+      const param1 = createConstant('a');
+      expect(param1.value).to.be.equals('a');
+
+      const param2 = createConstant(true);
+      expect(param2.value).to.be.equals(true);
+    });
+
   });
 
   describe('cached', () => {
@@ -105,7 +113,7 @@ describe('params', () => {
 
     it('should create a contextual param', () => {
       const param = createContextual(() => Promise.resolve(1000));
-      param.resolve({}).then(result => expect(result).to.be.equals(1000));
+      param.resolve({}, 1).then(result => expect(result).to.be.equals(1000));
     });
 
     it('should test against a cached param', () => {
@@ -114,13 +122,14 @@ describe('params', () => {
     });
 
     it('should retrieve value from constant param in context', () => {
-      const param = createContextual((context) => {
+      const param = createContextual((context, step) => {
         const gross = context['GROSS'] as ConstantParameter<number>;
         expect(is.constant(gross)).to.be.true;
+        expect(step).to.be.equals(1);
         return Promise.resolve(gross.value);
       });
 
-      return param.resolve({ 'GROSS': createConstant(1000) })
+      return param.resolve({ 'GROSS': createConstant(1000) }, 1)
         .then((result) => expect(result).to.be.equals(1000));
     });
 
@@ -131,7 +140,7 @@ describe('params', () => {
         return credit.resolve().then(result => result * 2);
       });
 
-      return param.resolve({ 'CUSTOMER_CREDIT': createCached(() => Promise.resolve(100)) })
+      return param.resolve({ 'CUSTOMER_CREDIT': createCached(() => Promise.resolve(100)) }, 1)
         .then((result) => expect(result).to.be.equals(200));
     });
 
@@ -159,12 +168,12 @@ describe('params', () => {
         expect(is.cached(credit)).to.be.true;
 
         return Promise.all([
-          tax.resolve(context),
+          tax.resolve(context, 1),
           credit.resolve(),
         ]).then(([tax, credit]) => tax * credit);
       });
 
-      return param.resolve(context).then((result) => {
+      return param.resolve(context, 1).then((result) => {
         expect(result).to.be.equals(20000);
         expect(cachedResolved).to.be.equals(1);
       });
@@ -184,7 +193,28 @@ describe('params', () => {
       expect(is.accumulated(param)).to.be.true;
     });
 
-    it('should correctly modify the param', () => {
+    it('should correctly modify the param with its default behavior', () => {
+      const param = createAccumulated(1000);
+      return param.modify(null, 10).then((result) => expect(param.value).to.be.equals(result).to.be.equals(10));
+    });
+
+    it('should behave the same with modifier applied and with when not', () => {
+      const param1 = createAccumulated(1000);
+      const param2 = createAccumulated(2000, (p, c, s) => Promise.resolve(s));
+
+      const promise1 = param1.modify(null, 10);
+      const promise2 = param2.modify(null, 20);
+
+      expect(param1.value).to.be.equals(1000);
+      expect(param2.value).to.be.equals(2000);
+
+      promise1.then(result => expect(param1.value).to.be.equals(result).to.be.equals(10));
+      promise2.then(result => expect(param2.value).to.be.equals(result).to.be.equals(20));
+
+      return Promise.all([promise1, promise2]);
+    });
+
+    it('should correctly modify the param with custom modifier', () => {
       const param = createAccumulated(1000,
         (param, context) => Promise.resolve(param.initial + (context['GROSS'] as ConstantParameter<number>).value));
 
@@ -192,7 +222,7 @@ describe('params', () => {
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1010));
     });
 
-    it('should correctly accumulate the value', () => {
+    it('should correctly accumulate the value with custom modifier', () => {
       const param = createAccumulated(1000,
         (param, context) => Promise.resolve(param.value + (context['GROSS'] as ConstantParameter<number>).value));
 
@@ -204,7 +234,7 @@ describe('params', () => {
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1020));
     });
 
-    it('should correctly accumulate the value based on step', () => {
+    it('should correctly accumulate the value based on step with custom modifier', () => {
       const param = createAccumulated(1000, (param, context, stepResult) => {
         return Promise.resolve(
           (param.value + (context['STEP_GROSS'] as ConstantParameter<number>).value) + stepResult
@@ -221,7 +251,7 @@ describe('params', () => {
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1080));
     });
 
-    it('should correctly accumulate the value with complex dependencies', () => {
+    it('should correctly accumulate the value with complex dependencies with custom modifier', () => {
 
       const context: Context = {
         STEP_GROSS: createConstant(10),

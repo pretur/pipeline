@@ -2,8 +2,8 @@ import * as acorn from 'acorn';
 
 const walk = require('acorn/dist/walk');
 
-export function discoverDependencies(expression: string, validIdentifiers: string[]): string[] {
-  const ast = acorn.parse(expression);
+export function discoverDependencies(expression: string | ESTree.Program, validIdentifiers: string[]): string[] {
+  const ast = typeof expression === 'string' ? acorn.parse(expression) : expression;
 
   const identifiers = [];
 
@@ -18,10 +18,32 @@ export function discoverDependencies(expression: string, validIdentifiers: strin
   return identifiers;
 }
 
-export function getAvailableStepIds(currentStep: number): string[] {
-  const ids = [];
-  for (let i = 1; i < currentStep; i++) {
-    ids.push(`STEP_${i}`);
+export function compileExpression(expression: string): (context: any) => void {
+  const script = Function('"use strict";' + expression);
+  return (context: any) => {
+
+    let originalGlobal;
+    let originalWindow;
+
+    if (typeof global !== 'undefined') {
+      originalGlobal = global;
+      global = context;
+    }
+
+    if (typeof window !== 'undefined') {
+      originalWindow = window;
+      window = context;
+    }
+
+    script.call(null);
+
+    if (global) {
+      global = originalGlobal;
+    }
+
+    if (window) {
+      window = originalWindow;
+    }
+
   }
-  return ids;
 }
