@@ -17,3 +17,11 @@ export function discoverDependencies(expression: string, validIdentifiers: strin
 
   return identifiers;
 }
+
+export function getAvailableStepIds(currentStep: number): string[] {
+  const ids = [];
+  for (let i = 1; i < currentStep; i++) {
+    ids.push(`STEP_${i}`);
+  }
+  return ids;
+}

@@ -2,7 +2,7 @@
 
 import {expect} from 'chai';
 
-import {discoverDependencies} from '../src/utils';
+import {discoverDependencies, getAvailableStepIds} from '../src/utils';
 
 describe('utils', () => {
 
@@ -31,4 +31,15 @@ describe('utils', () => {
 
   });
 
+  describe('getAvailableStepIds', () => {
+
+    it('should return no ids for step 1', () => {
+      expect(getAvailableStepIds(1)).to.be.deep.equal([]);
+    });
+
+    it('should return correct ids for step 5', () => {
+      expect(getAvailableStepIds(5)).to.be.deep.equal(['STEP_1', 'STEP_2', 'STEP_3', 'STEP_4']);
+    });
+
+  });
 });
