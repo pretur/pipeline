@@ -6,15 +6,15 @@ import {expect} from 'chai';
 import {Context} from '../src/pipeline';
 
 import {
-is,
-createConstant,
-createCached,
-createContextual,
-createAccumulated,
-AccumulatedParameter,
-ConstantParameter,
-ContextualParameter,
-CachedParameter,
+  is, as,
+  createConstant,
+  createCached,
+  createContextual,
+  createAccumulated,
+  AccumulatedParameter,
+  ConstantParameter,
+  ContextualParameter,
+  CachedParameter,
 } from '../src/param';
 
 describe('params', () => {
@@ -123,7 +123,7 @@ describe('params', () => {
 
     it('should retrieve value from constant param in context', () => {
       const param = createContextual((context, step) => {
-        const gross = context['GROSS'] as ConstantParameter<number>;
+        const gross = as.constant<number>(context['GROSS']);
         expect(is.constant(gross)).to.be.true;
         expect(step).to.be.equals(1);
         return Promise.resolve(gross.value);
@@ -135,7 +135,7 @@ describe('params', () => {
 
     it('should retrieve value from a cached param in context', () => {
       const param = createContextual((context) => {
-        const credit = context['CUSTOMER_CREDIT'] as CachedParameter<number>;
+        const credit = as.cached<number>(context['CUSTOMER_CREDIT']);
         expect(is.cached(credit)).to.be.true;
         return credit.resolve().then(result => result * 2);
       });
@@ -154,17 +154,17 @@ describe('params', () => {
           return Promise.resolve(100);
         }),
         'TAX': createContextual((context) => {
-          const credit = context['CUSTOMER_CREDIT'] as CachedParameter<number>;
+          const credit = as.cached<number>(context['CUSTOMER_CREDIT']);
           expect(is.cached(credit)).to.be.true;
           return credit.resolve().then(result => result * 2);
         }),
       };
 
       const param = createContextual((context) => {
-        const tax = context['TAX'] as ContextualParameter<number>;
+        const tax = as.contextual<number>(context['TAX']);
         expect(is.contextual(tax)).to.be.true;
 
-        const credit = context['CUSTOMER_CREDIT'] as CachedParameter<number>;
+        const credit = as.cached<number>(context['CUSTOMER_CREDIT']);
         expect(is.cached(credit)).to.be.true;
 
         return Promise.all([
@@ -216,7 +216,7 @@ describe('params', () => {
 
     it('should correctly modify the param with custom modifier', () => {
       const param = createAccumulated(1000,
-        (param, context) => Promise.resolve(param.initial + (context['GROSS'] as ConstantParameter<number>).value));
+        (param, context) => Promise.resolve(param.initial + as.constant<number>(context['GROSS']).value));
 
       return param.modify({ GROSS: createConstant(10) }, null)
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1010));
@@ -224,7 +224,7 @@ describe('params', () => {
 
     it('should correctly accumulate the value with custom modifier', () => {
       const param = createAccumulated(1000,
-        (param, context) => Promise.resolve(param.value + (context['GROSS'] as ConstantParameter<number>).value));
+        (param, context) => Promise.resolve(param.value + as.constant<number>(context['GROSS']).value));
 
       const context: Context = { GROSS: createConstant(10) };
 
@@ -237,7 +237,7 @@ describe('params', () => {
     it('should correctly accumulate the value based on step with custom modifier', () => {
       const param = createAccumulated(1000, (param, context, stepResult) => {
         return Promise.resolve(
-          (param.value + (context['STEP_GROSS'] as ConstantParameter<number>).value) + stepResult
+          (param.value + as.constant<number>(context['STEP_GROSS']).value) + stepResult
         );
       });
 

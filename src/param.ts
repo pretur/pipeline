@@ -55,6 +55,24 @@ export const is = {
   },
 };
 
+export const as = {
+  constant<T>(parameter: Parameter): ConstantParameter<T> {
+    return is.constant<T>(parameter) ? parameter : null;
+  },
+
+  cached<T>(parameter: Parameter): CachedParameter<T> {
+    return is.cached<T>(parameter) ? parameter : null;
+  },
+
+  contextual<T>(parameter: Parameter): ContextualParameter<T> {
+    return is.contextual<T>(parameter) ? parameter : null;
+  },
+
+  accumulated<T>(parameter: Parameter): AccumulatedParameter<T> {
+    return is.accumulated<T>(parameter) ? parameter : null;
+  },
+};
+
 export function createConstant<T>(value: T): ConstantParameter<T> {
   return {
     value,
