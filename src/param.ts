@@ -28,13 +28,13 @@ export interface ContextualParameter<T> extends Parameter {
 }
 
 export interface AccumulationModifier<T> {
-  (param: AccumulatedParameter<T>, context: Context, stepResult: T): Promise<T>;
+  (param: AccumulatedParameter<T>, context: Context, step: number, stepResult: T): Promise<T>;
 }
 
 export interface AccumulatedParameter<T> extends Parameter {
   initial: T;
   value: T;
-  modify(context: Context, stepResult: T): Promise<T>;
+  modify(context: Context, step: number, stepResult: T): Promise<T>;
 }
 
 export const is = {
@@ -132,10 +132,10 @@ export function createAccumulated<T>(
     type: ParameterType.ACCUMULATED,
   };
 
-  accumulated.modify = (context: Context, stepResult: T) => {
+  accumulated.modify = (context: Context, step, stepResult: T) => {
 
     const modifierPromise = modifier
-      ? modifier(accumulated, context, stepResult)
+      ? modifier(accumulated, context, step, stepResult)
       : Promise.resolve(stepResult);
 
     return modifierPromise.then(result => {

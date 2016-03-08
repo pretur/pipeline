@@ -195,15 +195,15 @@ describe('params', () => {
 
     it('should correctly modify the param with its default behavior', () => {
       const param = createAccumulated(1000);
-      return param.modify(null, 10).then((result) => expect(param.value).to.be.equals(result).to.be.equals(10));
+      return param.modify(null, 0, 10).then((result) => expect(param.value).to.be.equals(result).to.be.equals(10));
     });
 
     it('should behave the same with modifier applied and with when not', () => {
       const param1 = createAccumulated(1000);
-      const param2 = createAccumulated(2000, (p, c, s) => Promise.resolve(s));
+      const param2 = createAccumulated(2000, (param, context, step, stepResult) => Promise.resolve(stepResult));
 
-      const promise1 = param1.modify(null, 10);
-      const promise2 = param2.modify(null, 20);
+      const promise1 = param1.modify(null, 0, 10);
+      const promise2 = param2.modify(null, 1, 20);
 
       expect(param1.value).to.be.equals(1000);
       expect(param2.value).to.be.equals(2000);
@@ -218,7 +218,7 @@ describe('params', () => {
       const param = createAccumulated(1000,
         (param, context) => Promise.resolve(param.initial + as.constant<number>(context['GROSS']).value));
 
-      return param.modify({ GROSS: createConstant(10) }, null)
+      return param.modify({ GROSS: createConstant(10) }, 0, null)
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1010));
     });
 
@@ -228,27 +228,27 @@ describe('params', () => {
 
       const context: Context = { GROSS: createConstant(10) };
 
-      return param.modify(context, null)
+      return param.modify(context, 0, null)
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1010))
-        .then(() => param.modify(context, null))
+        .then(() => param.modify(context, 0, null))
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1020));
     });
 
     it('should correctly accumulate the value based on step with custom modifier', () => {
-      const param = createAccumulated(1000, (param, context, stepResult) => {
+      const param = createAccumulated(1000, (param, context, step, stepResult) => {
         return Promise.resolve(
-          (param.value + as.constant<number>(context['STEP_GROSS']).value) + stepResult
+          (param.value + as.constant<number>(context['STEP_GROSS']).value) + stepResult * step
         );
       });
 
       const context: Context = { STEP_GROSS: createConstant(10) };
 
-      return param.modify(context, 100)
-        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1110))
-        .then(() => param.modify(context, 150))
-        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1270))
-        .then(() => param.modify(context, -200))
-        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1080));
+      return param.modify(context, 0, 100)
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1010))
+        .then(() => param.modify(context, 1, 150))
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(1170))
+        .then(() => param.modify(context, 2, -200))
+        .then(result => expect(param.value).to.be.equals(result).to.be.equals(780));
     });
 
     it('should correctly accumulate the value with complex dependencies with custom modifier', () => {
@@ -258,18 +258,18 @@ describe('params', () => {
         CUSTOMER_CREDIT: createCached(() => Promise.resolve(1000)),
       };
 
-      const param = createAccumulated(1000, (param, context, stepResult) => {
+      const param = createAccumulated(1000, (param, context, step, stepResult) => {
         const gross = (context['STEP_GROSS'] as ConstantParameter<number>).value;
         const creditPromise = (context['CUSTOMER_CREDIT'] as CachedParameter<number>).resolve();
 
         return creditPromise.then(credit => Promise.resolve(param.value + gross - (credit / 1000) + stepResult));
       });
 
-      return param.modify(context, 100)
+      return param.modify(context, 0, 100)
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1109))
-        .then(() => param.modify(context, 150))
+        .then(() => param.modify(context, 1, 150))
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1268))
-        .then(() => param.modify(context, -200))
+        .then(() => param.modify(context, 2, -200))
         .then(result => expect(param.value).to.be.equals(result).to.be.equals(1077));
     });
 
