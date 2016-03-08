@@ -37,8 +37,9 @@
     "typings": "^0.6.8"
   },
   "dependencies": {
-    "acorn": "^3.0.4",
     "bluebird": "^3.3.3",
+    "esprima": "^2.7.2",
+    "esprima-walk": "^0.1.0",
     "isomorphic-vm": "0.0.1"
   }
 }

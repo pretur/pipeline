@@ -4,8 +4,8 @@
   "author": "Ali Taheri Moghaddar <ali.taheri.m@gmail.com>",
   "description": "Monetary calculation pipeline",
   "ambientDependencies": {
-    "acorn": "github:DefinitelyTyped/DefinitelyTyped/acorn/acorn.d.ts#1914a00b3c740348dae407ee0d2be89b0b58ad7f",
     "bluebird": "github:DefinitelyTyped/DefinitelyTyped/bluebird/bluebird.d.ts#1914a00b3c740348dae407ee0d2be89b0b58ad7f",
+    "esprima": "github:DefinitelyTyped/DefinitelyTyped/esprima/esprima.d.ts#1914a00b3c740348dae407ee0d2be89b0b58ad7f",
     "estree": "github:DefinitelyTyped/DefinitelyTyped/estree/estree.d.ts#1914a00b3c740348dae407ee0d2be89b0b58ad7f"
   },
   "ambientDevDependencies": {

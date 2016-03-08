@@ -1,7 +1,7 @@
 /// <reference path="../typings/main.d.ts" />
 
 import {expect} from 'chai';
-import * as acorn from 'acorn';
+import * as esprima from 'esprima';
 
 import {discoverDependencies, executeExpression, contextify} from '../src/utils';
 
@@ -10,33 +10,33 @@ describe('utils', () => {
   describe('discoverDependencies', () => {
 
     it('should discover simple dependencies', () => {
-      const validIds = ['GROSS', 'NET', 'STEP_1'];
-      const expression = `result = (STEP_1 + GROSS - NET) / NET * STEP_1`;
+      const validIds = ['GROSS', 'NET', 'STEP_1', 'RESULT'];
+      const expression = `RESULT = (STEP_1 + GROSS - NET) / NET * STEP_1`;
 
       const deps = discoverDependencies(expression, validIds);
 
-      expect(deps).to.be.deep.equal(['STEP_1', 'GROSS', 'NET']);
+      expect(deps.sort()).to.be.deep.equal(['RESULT', 'STEP_1', 'GROSS', 'NET'].sort());
     });
 
     it('should discover dependencies in code block', () => {
-      const validIds = ['GROSS', 'NET', 'CREDIT', 'STEP_1'];
+      const validIds = ['RESULT', 'GROSS', 'NET', 'CREDIT', 'STEP_1'];
       const expression = `
         var grossAndNet = GROSS + pow(NET - GROSS, STEP_1);
         var minusCredit = grossAndNet - CREDIT;
-        result = minusCredit - STEP_1 * NET; `;
+        RESULT = minusCredit - STEP_1 * NET; `;
 
       const deps = discoverDependencies(expression, validIds);
 
-      expect(deps).to.be.deep.equal(['GROSS', 'NET', 'STEP_1', 'CREDIT']);
+      expect(deps.sort()).to.be.deep.equal(['RESULT', 'GROSS', 'NET', 'STEP_1', 'CREDIT'].sort());
     });
 
     it('should discover dependencies from a syntax tree', () => {
-      const validIds = ['GROSS', 'NET', 'STEP_1'];
-      const expression = `result = (STEP_1 + GROSS - NET) / NET * STEP_1`;
+      const validIds = ['RESULT', 'GROSS', 'NET', 'STEP_1'];
+      const expression = `RESULT = (STEP_1 + GROSS - NET) / NET * STEP_1`;
 
-      const deps = discoverDependencies(acorn.parse(expression), validIds);
+      const deps = discoverDependencies(esprima.parse(expression), validIds);
 
-      expect(deps).to.be.deep.equal(['STEP_1', 'GROSS', 'NET']);
+      expect(deps.sort()).to.be.deep.equal(['RESULT', 'STEP_1', 'GROSS', 'NET'].sort());
     });
 
   });

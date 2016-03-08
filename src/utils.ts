@@ -1,22 +1,23 @@
-import * as acorn from 'acorn';
 import vm from 'isomorphic-vm';
+import * as esprima from 'esprima';
 
-const walk = require('acorn/dist/walk');
+const walk = require('esprima-walk');
 
 import contextify from './contextify';
 export {contextify};
 
 export function discoverDependencies(expression: string | ESTree.Program, validIdentifiers: string[]): string[] {
-  const ast = typeof expression === 'string' ? acorn.parse(expression) : expression;
+  const ast = typeof expression === 'string' ? esprima.parse(expression) : expression;
 
   const identifiers = [];
 
-  walk.simple(ast, {
-    'Identifier': (node) => {
-      if (node.name && validIdentifiers.indexOf(node.name) !== -1 && identifiers.indexOf(node.name) === -1) {
-        identifiers.push(node.name);
-      }
-    },
+  walk(ast, node => {
+    if (node &&
+      node.type === 'Identifier' &&
+      validIdentifiers.indexOf(node.name) !== -1 &&
+      identifiers.indexOf(node.name) === -1) {
+      identifiers.push(node.name);
+    }
   });
 
   return identifiers;
