@@ -1,6 +1,10 @@
 import * as acorn from 'acorn';
+import vm from 'isomorphic-vm';
 
 const walk = require('acorn/dist/walk');
+
+import contextify from './contextify';
+export {contextify};
 
 export function discoverDependencies(expression: string | ESTree.Program, validIdentifiers: string[]): string[] {
   const ast = typeof expression === 'string' ? acorn.parse(expression) : expression;
@@ -18,32 +22,6 @@ export function discoverDependencies(expression: string | ESTree.Program, validI
   return identifiers;
 }
 
-export function compileExpression(expression: string): (context: any) => void {
-  const script = Function('"use strict";' + expression);
-  return (context: any) => {
-
-    let originalGlobal;
-    let originalWindow;
-
-    if (typeof global !== 'undefined') {
-      originalGlobal = global;
-      global = context;
-    }
-
-    if (typeof window !== 'undefined') {
-      originalWindow = window;
-      window = context;
-    }
-
-    script.call(null);
-
-    if (global) {
-      global = originalGlobal;
-    }
-
-    if (window) {
-      window = originalWindow;
-    }
-
-  }
+export function executeExpression(expression: string, context: any): void {
+  vm.runInNewContext(expression, context);
 }

@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "acorn": "^3.0.4",
-    "bluebird": "^3.3.3"
+    "bluebird": "^3.3.3",
+    "isomorphic-vm": "0.0.1"
   }
 }
